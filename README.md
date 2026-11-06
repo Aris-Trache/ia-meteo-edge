@@ -24,7 +24,7 @@ Capteurs (HTS221, LPS22HH, STTS751) --I2C--> STM32N6 --(Ethernet/LwIP)--> ThingS
 | `docs/`      | Résultats, figures, pitch, déclaration d'usage de l'IA |
 
 ## Avancement
-- [ ] TP1 — MNIST : activations, optimiseurs, fonctions coût
+- [x] TP1 — MNIST : activations, optimiseurs, fonctions coût → [résultats](docs/TP1_RESULTATS.md)
 - [ ] TP2 — LED / chenillard / logs UART
 - [ ] TP2 — Lecture capteurs I²C + LEDs d'état
 - [ ] TP2 — FreeRTOS + LwIP + ping

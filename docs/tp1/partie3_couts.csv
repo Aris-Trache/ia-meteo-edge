@@ -1,0 +1,5 @@
+modele,accuracy_test,loss_test,epochs_meilleur,epochs_total,temps_s,neurones,poids,synapses,mem_float32_ko,mem_int8_ko
+categorical (one-hot),0.9766,0.0772,13,16,23.6,138,101632,101770,397.5,99.4
+sparse_categorical (entiers),0.9748,0.0798,14,17,26.1,138,101632,101770,397.5,99.4
+sparse + logits,0.9742,0.0844,16,19,28.4,138,101632,101770,397.5,99.4
+binary (pair/impair),0.9857,0.0413,10,13,20.1,129,100480,100609,393.0,98.3

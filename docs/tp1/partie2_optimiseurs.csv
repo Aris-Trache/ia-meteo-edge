@@ -1,0 +1,5 @@
+modele,accuracy_test,loss_test,epochs_meilleur,epochs_total,temps_s,neurones,poids,synapses,mem_float32_ko,mem_int8_ko
+SGD,0.9359,0.2298,30,30,39.4,138,101632,101770,397.5,99.4
+Adam,0.9759,0.0769,13,16,24.4,138,101632,101770,397.5,99.4
+RMSprop,0.9774,0.0756,16,19,26.3,138,101632,101770,397.5,99.4
+Adagrad,0.9088,0.338,30,30,41.0,138,101632,101770,397.5,99.4
