@@ -1,0 +1,21 @@
+# Python / Colab
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+.venv/
+# STM32CubeIDE build outputs
+**/Debug/
+**/Release/
+*.o
+*.d
+*.su
+*.elf
+*.map
+*.list
+.metadata/
+# OS
+.DS_Store
+Thumbs.db
+# Gros jeux de données
+data/*.csv
+!data/.gitkeep
