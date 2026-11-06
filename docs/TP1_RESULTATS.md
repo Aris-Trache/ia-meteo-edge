@@ -42,7 +42,8 @@ L'écart d'un entraînement à l'autre est donc d'environ **±0,1 point** (non-d
 **Pourquoi tanh 1c (128)**
 1. **Pareto-optimal** : aucun autre modèle n'est à la fois plus petit et plus précis. Seule sigmoid 1c, de taille identique, fait +0,18 point, ce qui est **dans le bruit** (±0,1 point mesuré, et la réexécution finale de tanh 1c donne 97,81 %, à égalité).
 2. **Deux fois moins d'epochs que sigmoid** (14 contre 26) : entraînement plus court, donc moins d'énergie consommée côté PC/Cloud (critère P_TEDS).
-3. **Le plus petit des modèles performants** : 99,4 Ko en int8, c'est-à-dire **~19 % de la Flash de 512 Ko** de la NUCLEO-N657X0. Il reste de la place pour le firmware, FreeRTOS et LwIP.
+3. **Le plus petit des modèles performants** : 99,4 Ko en int8. Le STM32N657 (Cortex-M55, jusqu'à 800 MHz) **n'a pas de Flash interne** : il dispose de ~4 Mo de SRAM (AXISRAM), et le code est stocké dans une Flash NOR externe (XSPI) en production. Le modèle n'occupe donc que **~2,5 % de la SRAM** et laisse largement la place au firmware, à FreeRTOS et à LwIP. Sur une carte plus modeste (ex. STM32F4 avec 512 Ko de Flash), ce même modèle prendrait déjà ~19 % de la mémoire : la sobriété du modèle reste un critère de portabilité.
+   *Remarque* : le sujet du TP2 indique « Cortex-M33, 160 MHz, 320 Ko de RAM, 512 Ko de Flash » ; ces valeurs ne correspondent pas au STM32N657 (vérifié sur la documentation de la carte NUCLEO-N657X0-Q).
 4. *Limite connue* : sur MCU, tanh coûte plus cher à calculer que ReLU (`max(0,x)`). Ici, ReLU coûte 0,5 point et 7 % de synapses en plus, donc le compromis penche vers tanh. En int8, X-CUBE-AI traite tanh par table de correspondance, ce qui limite ce surcoût.
 
 ## Partie 2 — Optimiseur (architecture tanh 1c)
