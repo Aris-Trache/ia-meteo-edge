@@ -32,7 +32,8 @@ Capteurs (SHT40, LPS22DF, STTS22H) --I2C--> STM32N6 --(Ethernet/LwIP)--> ThingSp
 - [ ] TP2 — FreeRTOS + LwIP + ping
 - [x] TP3 — Modèle Meteostat, 3 classes, F1 macro 0,606 → [résultats](docs/TP3_RESULTATS.md)
 - [x] TP3 — Inférence embarquée en C sur la carte : **14,7 µs** / prédiction (caches + -O3, ×55 vs défaut)
-- [ ] TP3 — Cloud : ONNX → MATLAB → ThingSpeak + TalkBack (modèle ONNX prêt)
+- [x] TP3 — Cloud : script MATLAB / ThingSpeak + TalkBack prêt et testé ([matlab/](matlab/README.md))
+- [ ] TP3 — Cloud : canaux ThingSpeak en ligne + envoi des mesures par la carte
 - [ ] TP3 — Edge : X-CUBE-AI sur N6 (modèle TFLite int8 prêt), consommation
 - [ ] TP4 — Démo + pitch 3 min
 

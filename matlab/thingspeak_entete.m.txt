@@ -1,0 +1,57 @@
+%% TP3.2 -- IA meteo dans le Cloud (ThingSpeak "MATLAB Analysis")
+% A COLLER TEL QUEL dans Apps > MATLAB Analysis > New, puis le declencher
+% toutes les 10 min avec Apps > TimeControl (ou par React a chaque mesure).
+% Genere par tools/export_matlab.py : le reseau est inclus (meme poids que
+% l'ONNX et que le C de la carte), aucune toolbox n'est necessaire.
+%
+% Flux :  carte --(LwIP/HTTP)--> canal CAPTEURS --(ce script)--> canal RESULTATS
+%                                                          \--> TalkBack --> carte
+%
+% Canal CAPTEURS (ecrit par la carte)  : field1 T [degC], field2 HR [%],
+%                                        field3 P niveau mer [hPa], field4 classe Edge (1..3)
+% Canal RESULTATS (ecrit ici)          : field1 classe Cloud (1..3), field2..4 probas [%],
+%                                        field5 accord Edge/Cloud (1/0), field6 heures d'historique
+% TalkBack : commande "METEO:<classe>:<p_precipitations_%>" lue par la carte.
+%
+% Les cles ci-dessous restent sur ThingSpeak : ne jamais les commiter dans le depot.
+
+%% ---- Configuration (a remplir) ----
+CANAL_CAPTEURS  = 0;            % Channel ID du canal capteurs
+CLE_LECTURE     = '';           % Read API Key du canal capteurs ('' si canal public)
+CANAL_RESULTATS = 0;            % Channel ID du canal resultats
+CLE_ECRITURE    = 'A_REMPLIR';  % Write API Key du canal resultats
+TALKBACK_ID     = 0;            % TalkBack ID (0 = ne pas envoyer de commande)
+TALKBACK_CLE    = 'A_REMPLIR';  % API Key du TalkBack
+
+%% ---- 1. Lecture des 7 dernieres heures ----
+M = meteo_modele();
+if isempty(CLE_LECTURE)
+  [d, t] = thingSpeakRead(CANAL_CAPTEURS, 'Fields', [1 2 3 4], 'NumMinutes', 420);
+else
+  [d, t] = thingSpeakRead(CANAL_CAPTEURS, 'Fields', [1 2 3 4], 'NumMinutes', 420, ...
+                          'ReadKey', CLE_LECTURE);
+end
+if isempty(d)
+  error('Canal capteurs vide sur les 7 dernieres heures : la carte envoie-t-elle ?');
+end
+t_s = posixtime(t);
+
+%% ---- 2. Prediction (memes features que la carte) ----
+[classe, proba, x, n_hist] = meteo_cloud_etape(t_s, d(:,1), d(:,2), d(:,3), M);
+[~, i_der] = max(t_s);
+classe_edge = d(i_der, 4);
+accord = double(classe_edge == classe);
+fprintf('Cloud : %s (%s) | Edge : %d | historique %d h\n', M.classes{classe}, ...
+        sprintf('%.0f%% ', 100*proba), classe_edge, n_hist);
+
+%% ---- 3. Publication du resultat ----
+thingSpeakWrite(CANAL_RESULTATS, [classe, round(100*proba), accord, n_hist], ...
+                'Fields', 1:6, 'WriteKey', CLE_ECRITURE);
+
+%% ---- 4. Commande de retour vers la carte (TalkBack) ----
+if TALKBACK_ID > 0
+  url = sprintf('https://api.thingspeak.com/talkbacks/%d/commands.json', TALKBACK_ID);
+  cmd = sprintf('METEO:%d:%d', classe, round(100*proba(3)));
+  webwrite(url, 'api_key', TALKBACK_CLE, 'command_string', cmd);
+  fprintf('TalkBack : %s\n', cmd);
+end

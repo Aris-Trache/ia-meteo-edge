@@ -159,6 +159,9 @@ Méthode : boucle de paquets de 1 000 inférences, répétée jusqu'à dépasser
 Résultat rappelé dans la console toutes les 30 s.
 
 ## 8. Reste à faire
-- [ ] Cloud : import ONNX dans MATLAB, inférence sur ThingSpeak, retour par TalkBack (nécessite un compte ThingSpeak).
+- [x] Cloud — code prêt et vérifié (`matlab/`) : MATLAB == Python à 5·10⁻⁷ près sur les features, 8/8 décisions
+  identiques à Keras, script ThingSpeak testé de bout en bout avec un ThingSpeak simulé (lecture → prédiction →
+  canal résultats → commande TalkBack). Voir [`matlab/README.md`](../matlab/README.md).
+- [ ] Cloud — création des canaux sur ThingSpeak (compte de l'auteur) et envoi des mesures par la carte (TP2.3, LwIP).
 - [ ] X-CUBE-AI : import du `.tflite` int8 dans CubeMX, temps CPU vs NPU (Neural-ART) comparé au C pur ci-dessus.
 - [ ] Consommation : mesure du courant (IDD) en attente / mesure / inférence.
