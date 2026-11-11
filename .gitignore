@@ -19,3 +19,10 @@ Thumbs.db
 # Gros jeux de données
 data/*.csv
 !data/.gitkeep
+# Archives temporaires / sorties de tests hote
+*.zip
+firmware/tests_hote/test_meteo
+firmware/tests_hote/test_capteurs
+*.exe
+# Donnees intermediaires regenerables
+data/*.parquet
