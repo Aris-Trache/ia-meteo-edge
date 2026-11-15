@@ -35,7 +35,7 @@ Capteurs (SHT40, LPS22DF, STTS22H) --I2C--> STM32N6 --(Ethernet/LwIP)--> ThingSp
 - [x] TP3 — Cloud : script MATLAB / ThingSpeak + TalkBack prêt et testé ([matlab/](matlab/README.md))
 - [x] TP3 — Cloud : la carte envoie ses mesures + sa prédiction sur le canal ThingSpeak « Meteo Capteurs »
 - [x] TP3 — Cloud : canal Résultats + analyse MATLAB toutes les 10 min + TalkBack vers la carte (comparaison Edge/Cloud affichée par la carte)
-- [ ] TP3 — NPU Neural-ART (ST Edge AI Core + compte myST), mesure de consommation
+- [x] TP3 — Consommation : estimation + protocole de mesure, NPU en perspective → [document](docs/CONSOMMATION.md)
 - [ ] TP4 — Démo + pitch 3 min
 
 ## Démarrage rapide
