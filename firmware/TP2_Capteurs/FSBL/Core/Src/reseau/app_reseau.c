@@ -21,6 +21,7 @@
   */
 #include "app_reseau.h"
 #include "ethernetif.h"
+#include "../meteo/meteo_model_params.h"   /* noms des classes */
 #include "main.h"
 
 #include "FreeRTOS.h"
@@ -315,9 +316,26 @@ static void envoyer_thingspeak(void)
   {
     snprintf(chemin, sizeof(chemin), "/talkbacks/%s/commands/execute?api_key=%s",
              THINGSPEAK_TALKBACK_ID, THINGSPEAK_TALKBACK_CLE);
-    if (http_get(HOTE_THINGSPEAK, chemin, rep, sizeof(rep)) > 0 && corps_http(rep)[0] != '\0')
+    if (http_get(HOTE_THINGSPEAK, chemin, rep, sizeof(rep)) > 0)
     {
-      LOG("  TalkBack (IA Cloud) : %s\r\n", corps_http(rep));
+      int classe_cloud = 0, p_precip = 0;
+      const char *c = corps_http(rep);
+      if (c[0] == '\0')
+      {
+        LOG("  TalkBack : pas de nouvelle commande (l'IA Cloud tourne toutes les 10 min)\r\n");
+      }
+      else if (sscanf(c, "METEO:%d:%d", &classe_cloud, &p_precip) == 2 &&
+               classe_cloud >= 1 && classe_cloud <= METEO_NB_CLASSES)
+      {
+        /* Comparaison Edge (carte) / Cloud (MATLAB) sur les memes mesures */
+        LOG("  TalkBack : IA Cloud = %s (precip. %d%%) | IA carte = %s -> %s\r\n",
+            METEO_CLASS_NAMES[classe_cloud - 1], p_precip, METEO_CLASS_NAMES[m.classe],
+            (classe_cloud - 1 == m.classe) ? "D'ACCORD" : "desaccord");
+      }
+      else
+      {
+        LOG("  TalkBack : commande inconnue \"%.40s\"\r\n", c);
+      }
     }
   }
 }

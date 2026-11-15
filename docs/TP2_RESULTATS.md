@@ -59,3 +59,26 @@ FreeRTOS : demarrage de l'ordonnanceur (tas libre 48736 octets)
 
 ## Taille du programme
 Code + constantes ≈ 235 Ko sur 255 Ko (compilation -O0 Debug) ; RAM : 192 Ko + 64 Ko réseau.
+
+## Boucle complète Edge ↔ Cloud (TP3.2)
+```
+carte --HTTP GET /update--> canal « Meteo Capteurs » (toutes les 20 s)
+      MATLAB Analysis « IA meteo cloud » (TimeControl, toutes les 10 min)
+        --> canal « Meteo Resultats » (classe, probas, accord Edge/Cloud, heures d'historique)
+        --> TalkBack « METEO:<classe>:<p_precip%> » --> lu par la carte au tour réseau suivant
+```
+Exemple réel (console de la carte) :
+```
+=> Nuageux-Couvert  (Degage 42%, Nuageux-Couvert 49%, Precipitations 9%)
+   int8 : Nuageux-Couvert (50%)
+ThingSpeak : mesure enregistree (entree n. 113)
+TalkBack : IA Cloud = Nuageux-Couvert (precip. 12%) | IA carte = Nuageux-Couvert -> D'ACCORD
+bilan : ping 21/21 OK, ThingSpeak 17 envois, trames rx 208 tx 211
+```
+**Observation Edge / Cloud.** Même réseau, mêmes mesures, mais les deux IA peuvent être en
+désaccord : au premier essai, le Cloud disait « Nuageux » et la carte « Dégagé ». La différence
+vient de l'**historique** : le Cloud relit les 7 dernières heures du canal (il voyait 1 h de
+mesures), alors que la carte repart de 0 h à chaque redémarrage (programme en RAM en mode
+développement). Les entrées « tendance de pression » ne sont donc pas les mêmes. C'est un
+avantage concret du Cloud : il garde la mémoire longue ; la carte, elle, répond en 8 µs, sans
+réseau, et l'historique pourrait être sauvegardé en flash pour corriger ce point.
