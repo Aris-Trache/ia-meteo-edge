@@ -29,18 +29,20 @@ Capteurs (SHT40, LPS22DF, STTS22H) --I2C--> STM32N6 --(Ethernet/LwIP)--> ThingSp
 - [x] TP1 — MNIST : activations, optimiseurs, fonctions coût → [résultats](docs/TP1_RESULTATS.md)
 - [x] TP2 — LED / chenillard / logs UART (cadencement sur échéance absolue, sans dérive)
 - [x] TP2 — Lecture capteurs I²C + LEDs d'état (IKS4A1 et IKS01A3 reconnues automatiquement)
-- [ ] TP2 — FreeRTOS + LwIP + ping
+- [x] TP2 — FreeRTOS + LwIP : DHCP, DNS, ping google.com (20 ms), serveur echo TCP, envoi ThingSpeak → [résultats](docs/TP2_RESULTATS.md)
 - [x] TP3 — Modèle Meteostat, 3 classes, F1 macro 0,606 → [résultats](docs/TP3_RESULTATS.md)
-- [x] TP3 — Inférence embarquée en C sur la carte : **14,7 µs** / prédiction (caches + -O3, ×55 vs défaut)
+- [x] TP3 — Inférence embarquée sur la carte : float32 **14,7 µs**, int8 CMSIS-NN/Helium **8,2 µs** (×98 vs config par défaut)
 - [x] TP3 — Cloud : script MATLAB / ThingSpeak + TalkBack prêt et testé ([matlab/](matlab/README.md))
-- [ ] TP3 — Cloud : canaux ThingSpeak en ligne + envoi des mesures par la carte
-- [ ] TP3 — Edge : X-CUBE-AI sur N6 (modèle TFLite int8 prêt), consommation
+- [x] TP3 — Cloud : la carte envoie ses mesures + sa prédiction sur le canal ThingSpeak « Meteo Capteurs »
+- [ ] TP3 — Cloud : canal Résultats + analyse MATLAB planifiée + TalkBack vers la carte
+- [ ] TP3 — NPU Neural-ART (ST Edge AI Core + compte myST), mesure de consommation
 - [ ] TP4 — Démo + pitch 3 min
 
 ## Démarrage rapide
 - **Entraîner / rejouer le TP3** : ouvrir `notebooks/TP3_Meteostat_IA.ipynb` dans Colab (le dépôt est cloné automatiquement).
 - **Carte** : importer `firmware/TP2_Capteurs` dans STM32CubeIDE, choisir le mode dans `main.c`
-  (`TP2_PARTIE` 1 = chenillard, 2 = capteurs, 3 = IA météo), Debug, console COM 115200 bauds.
+  (`TP2_PARTIE` 1 = chenillard, 2 = capteurs, 3 = IA météo, 4 = IA météo + FreeRTOS/LwIP/Ethernet), Debug, console COM 115200 bauds.
+  Réseau (mode 4) : câble Ethernet carte ↔ PC + partage de connexion Windows (DHCP 192.168.137.x) ; clé ThingSpeak dans `FSBL/Core/Inc/secrets_thingspeak.h` (copie de `secrets_thingspeak_exemple.h`, ignoré par git).
   Boot de développement : BOOT0 = JP1 en 1-2, BOOT1 = JP2 en 2-3 (programme en RAM : relancer par Debug, pas par RESET).
 
 ## Usage de l'IA

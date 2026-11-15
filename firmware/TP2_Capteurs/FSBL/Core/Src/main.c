@@ -26,6 +26,9 @@
 #include "capteurs.h"
 #include "meteo/meteo_features.h"
 #include "meteo/meteo_mlp_ref.h"
+#include "meteo/meteo_mlp_s8.h"
+#include "reseau/app_reseau.h"
+#include "reseau/eth_carte.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -38,8 +41,9 @@
 /* Choix de la demonstration (un seul projet pour TP2 + TP3) :
      1 = TP2 partie 1 : chenillard 3 LEDs + logs console
      2 = TP2 partie 2 : lecture des capteurs I2C + LEDs temoins d'etat
-     3 = TP3 partie 3 : capteurs + IA embarquee (classification meteo sur la carte) */
-#define TP2_PARTIE              3
+     3 = TP3 partie 3 : capteurs + IA embarquee (classification meteo sur la carte)
+     4 = TP2 partie 3 : idem 3 + FreeRTOS + LwIP (Ethernet, DHCP, ping, ThingSpeak) */
+#define TP2_PARTIE              4
 
 /* TP3 : periode d'ajout a l'historique du modele. Le modele a ete entraine sur des
    donnees HORAIRES : 3600000 ms est la seule valeur physiquement correcte.
@@ -70,7 +74,9 @@ static MeteoHistorique_t meteo_hist;
 static uint32_t meteo_debut_heure_ms = 0U;
 static float    meteo_somme_t = 0.0f, meteo_somme_rh = 0.0f, meteo_somme_p = 0.0f;
 static uint32_t meteo_nb_mesures = 0U;
-static uint32_t bench_ns_off = 0U, bench_ns_on = 0U;   /* duree d'une inference [ns] */
+static uint32_t bench_ns_off = 0U, bench_ns_on = 0U;   /* duree d'une inference float [ns] */
+static uint32_t bench_ns_s8 = 0U;                      /* idem, reseau int8 CMSIS-NN [ns] */
+static uint32_t nb_accord_s8 = 0U;                     /* predictions float == int8 */
 static uint32_t nb_predictions = 0U;
 
 /* Sequence du chenillard : ordre des LEDs et nom affiche dans les logs.
@@ -99,8 +105,10 @@ static void etape_chenillard(void) __attribute__((unused));
 static void etape_capteurs(void) __attribute__((unused));
 static void afficher_valeur(const char *nom, float v, const char *unite, int valide);
 static void etape_ia_meteo(void) __attribute__((unused));
-static uint32_t mesurer_temps_inference(const char *config) __attribute__((unused));
+typedef int (*FonctionReseau_t)(const float *x, float *p);
+static uint32_t mesurer_temps_inference(const char *config, FonctionReseau_t f, const char *nom) __attribute__((unused));
 static void afficher_bench(void) __attribute__((unused));
+static void tache_capteurs_ia(void *arg) __attribute__((unused));
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -181,16 +189,30 @@ int main(void)
   BSP_LED_On(LED_GREEN);                      /* vert = disponible, en attente */
   prochaine_lecture_ms = HAL_GetTick();
 #endif
-#if TP2_PARTIE == 3
+#if TP2_PARTIE == 4
+  /* TP2.3 : AVANT d'activer le D-cache, la zone RAM du DMA Ethernet est declaree
+     non cacheable (MPU) ; la securite RIF autorise le DMA Ethernet a acceder a la RAM. */
+  eth_carte_mpu_config();
+  eth_carte_rif_config();
+#endif
+#if TP2_PARTIE >= 3
   meteo_historique_init(&meteo_hist);
   meteo_debut_heure_ms = HAL_GetTick();
   /* TP3 3.c : effet des caches L1 du Cortex-M55 (desactives par defaut dans le FSBL).
      Le programme est pilote par scrutation (pas de DMA) : activer le D-cache est sans
      risque de coherence. On les laisse actives pour la suite. */
-  bench_ns_off = mesurer_temps_inference("caches OFF");
+  bench_ns_off = mesurer_temps_inference("caches OFF", meteo_mlp_ref_predire, "float32 C, -O3");
   SCB_EnableICache();
   SCB_EnableDCache();
-  bench_ns_on  = mesurer_temps_inference("caches ON ");
+  bench_ns_on  = mesurer_temps_inference("caches ON ", meteo_mlp_ref_predire, "float32 C, -O3");
+  /* TP3 3.c : meme reseau quantifie int8, noyaux CMSIS-NN (runtime TFLite Micro de X-CUBE-AI) */
+  bench_ns_s8  = mesurer_temps_inference("caches ON ", meteo_mlp_s8_predire, "int8 CMSIS-NN");
+  printf("   (noyaux CMSIS-NN compiles pour : %s)\r\n", meteo_mlp_s8_backend());
+#endif
+
+#if TP2_PARTIE == 4
+  /* TP2.3 : a partir d'ici FreeRTOS prend la main (cette fonction ne revient pas) */
+  reseau_lancer(tache_capteurs_ia, 2048U);
 #endif
 
   while (1)
@@ -384,10 +406,14 @@ static void etape_ia_meteo(void)
   Mesures_t m;
   float brut[METEO_NB_FEATURES], norm[METEO_NB_FEATURES], proba[METEO_NB_CLASSES];
 
+#if TP2_PARTIE == 4
+  log_etat("Lecture Interface Capteurs");     /* cadence par vTaskDelayUntil */
+#else
   while ((int32_t)(HAL_GetTick() - prochaine_lecture_ms) < 0)
   {
   }
   prochaine_lecture_ms += PERIODE_LECTURE_MS;
+#endif
 
   BSP_LED_Off(LED_GREEN);
   BSP_LED_On(LED_RED);
@@ -420,11 +446,20 @@ static void etape_ia_meteo(void)
     meteo_debut_heure_ms += METEO_PERIODE_HISTO_MS;
   }
 
-  BSP_LED_On(LED_BLUE);                       /* bleu = inference IA */
+#if TP2_PARTIE != 4
+  BSP_LED_On(LED_BLUE);                       /* bleu = inference IA (TP2.3 : bleu = reseau) */
+#endif
   meteo_calculer_features(&meteo_hist, t, m.humidite_rh, p_mer, brut);
   meteo_normaliser(brut, norm);
   int classe = meteo_mlp_ref_predire(norm, proba);
+  float proba_s8[METEO_NB_CLASSES];
+  int classe_s8 = meteo_mlp_s8_predire(norm, proba_s8);   /* meme entree, reseau int8 */
+#if TP2_PARTIE != 4
   BSP_LED_Off(LED_BLUE);
+#else
+  MeteoPublication_t pub = { 1, t, m.humidite_rh, p_mer, classe, proba[METEO_NB_CLASSES - 1] };
+  reseau_publier_mesure(&pub);                /* envoyee au Cloud par la tache reseau */
+#endif
   BSP_LED_On(LED_GREEN);
 
   log_etat("Prediction IA embarquee");
@@ -439,6 +474,13 @@ static void etape_ia_meteo(void)
     printf("%s %lu%%%s", METEO_CLASS_NAMES[i], (unsigned long)(proba[i] * 100.0f + 0.5f),
            (i < METEO_NB_CLASSES - 1) ? ", " : ")\r\n");
   }
+  if (classe_s8 >= 0)
+  {
+    printf("      int8 : %s (%lu%%)%s\r\n", METEO_CLASS_NAMES[classe_s8],
+           (unsigned long)(proba_s8[classe_s8] * 100.0f + 0.5f),
+           (classe_s8 == classe) ? "" : "  <- DIFFERENT du float");
+    nb_accord_s8 += (classe_s8 == classe) ? 1U : 0U;
+  }
   if ((++nb_predictions % 15U) == 0U)          /* toutes les 30 s */
   {
     afficher_bench();
@@ -452,7 +494,7 @@ static void etape_ia_meteo(void)
   *         dure 1 us ou 1 ms, malgre la resolution de 1 ms du tick.
   * @param  config  texte decrivant la configuration testee (affiche dans le log)
   */
-static uint32_t mesurer_temps_inference(const char *config)
+static uint32_t mesurer_temps_inference(const char *config, FonctionReseau_t f, const char *nom)
 {
   float x[METEO_NB_FEATURES] = {0}, p[METEO_NB_CLASSES];
   volatile int sink = 0;
@@ -463,7 +505,7 @@ static uint32_t mesurer_temps_inference(const char *config)
     for (uint32_t i = 0; i < METEO_BENCH_N; i++)
     {
       x[0] = (float)(i & 7) * 0.1f;            /* entree variable : evite l'optimisation */
-      sink += meteo_mlp_ref_predire(x, p);
+      sink += f(x, p);
     }
     n += METEO_BENCH_N;
     dt = HAL_GetTick() - t0;
@@ -471,22 +513,43 @@ static uint32_t mesurer_temps_inference(const char *config)
 
   /* temps en nanosecondes par inference, calcul entier sur 64 bits */
   uint32_t ns = (uint32_t)(((uint64_t)dt * 1000000ULL) / n);
-  printf("Benchmark IA [%s | reseau %s] : %lu inferences en %lu ms -> %lu.%02lu us / inference (CPU %lu MHz)\r\n",
-         config, meteo_mlp_ref_optim(), (unsigned long)n, (unsigned long)dt,
+  printf("Benchmark IA [%s | %s] : %lu inferences en %lu ms -> %lu.%02lu us / inference (CPU %lu MHz)\r\n",
+         config, nom, (unsigned long)n, (unsigned long)dt,
          (unsigned long)(ns / 1000U), (unsigned long)((ns % 1000U) / 10U),
          (unsigned long)(SystemCoreClock / 1000000U));
   (void)sink;
   return ns;
 }
 
+/**
+  * @brief  TP2.3 : tache FreeRTOS capteurs + IA, une mesure toutes les 2 s.
+  *         vTaskDelayUntil = echeance absolue (pas de derive) et, pendant
+  *         l'attente, le processeur est rendu aux autres taches (reseau).
+  */
+static void tache_capteurs_ia(void *arg)
+{
+  (void)arg;
+  TickType_t reveil = xTaskGetTickCount();
+  for (;;)
+  {
+    vTaskDelayUntil(&reveil, pdMS_TO_TICKS(PERIODE_LECTURE_MS));
+    console_verrouiller();                    /* logs d'un seul bloc, pas melanges */
+    etape_ia_meteo();
+    console_liberer();
+  }
+}
+
 /* Rappel periodique du benchmark (le debut du log defile vite dans la console) */
 static void afficher_bench(void)
 {
-  printf("   [bench reseau %s] caches OFF %lu.%02lu us | caches ON %lu.%02lu us | gain x%lu\r\n",
+  printf("   [bench] float32 %s : caches OFF %lu.%02lu us, ON %lu.%02lu us | int8 CMSIS-NN (%s) : %lu.%02lu us"
+         " | accord float/int8 %lu/%lu\r\n",
          meteo_mlp_ref_optim(),
          (unsigned long)(bench_ns_off / 1000U), (unsigned long)((bench_ns_off % 1000U) / 10U),
          (unsigned long)(bench_ns_on / 1000U),  (unsigned long)((bench_ns_on % 1000U) / 10U),
-         (unsigned long)(bench_ns_on ? (bench_ns_off + bench_ns_on / 2U) / bench_ns_on : 0U));
+         meteo_mlp_s8_backend(),
+         (unsigned long)(bench_ns_s8 / 1000U),  (unsigned long)((bench_ns_s8 % 1000U) / 10U),
+         (unsigned long)nb_accord_s8, (unsigned long)nb_predictions);
 }
 
 /**

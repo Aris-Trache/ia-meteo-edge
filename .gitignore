@@ -26,3 +26,6 @@ firmware/tests_hote/test_capteurs
 *.exe
 # Donnees intermediaires regenerables
 data/*.parquet
+
+# TP2.3 : cles ThingSpeak locales (jamais sur GitHub)
+secrets_thingspeak.h

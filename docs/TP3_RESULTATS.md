@@ -141,27 +141,50 @@ Une prédiction toutes les 2 s (LED rouge = lecture, bleue = inférence, verte =
 Mesure faite en intérieur, alors que la météo Windows annonçait « pluie fine » : la classe « précipitations » est la 2ᵉ (37 %),
 cohérent avec une pression basse (999,6 hPa). Sans historique, le modèle est en mode « démarrage à froid ».
 
-### Temps d'inférence (C pur, float32, Cortex-M55 à 600 MHz)
-| Compilation de l'inférence | Caches L1 OFF | Caches L1 ON |
+### Temps d'inférence (Cortex-M55 à 600 MHz, mesuré sur la carte)
+| Implémentation | Caches L1 OFF | Caches L1 ON |
 |---|---|---|
-| -O0 (Debug par défaut) | 808 µs | 63,2 µs |
-| **-O3 (pragma local)** | 146 µs | **14,7 µs** |
+| float32, C pur, -O0 (Debug par défaut) | 808 µs | 63,2 µs |
+| float32, C pur, -O3 (pragma local) | 146 µs | 14,7 µs |
+| **int8, CMSIS-NN (Helium / MVE), -O3** | — | **8,2 µs** |
 
-**×55 sans toucher au réseau**, uniquement par la configuration du processeur et du compilateur.
+**×98 entre la configuration par défaut et la meilleure**, pour le même réseau.
 - Les **caches** (×10 à ×13) sont désactivés par défaut dans le FSBL : sans eux, chaque lecture de poids
   va jusqu'à la SRAM AXI. Le programme travaille par scrutation (pas de DMA), donc activer le D-cache est sans risque.
 - **-O3** (×4 à ×5) : les variables restent dans les registres au lieu d'aller-retours en pile.
-  Il est appliqué par `#pragma` au seul fichier du réseau, ce qui laisse le reste du projet en -O0, debuggable pas à pas.
-- 14,7 µs ≈ 8 800 cycles pour 1 059 multiplications-additions + softmax. Une inférence toutes les 2 s occupe le CPU
-  **0,0007 %** du temps : la consommation sera dominée par les capteurs et l'attente, pas par l'IA.
+  Il est appliqué par `#pragma` aux seuls fichiers d'IA, ce qui laisse le reste du projet en -O0, debuggable pas à pas.
+- **int8 + CMSIS-NN** (×1,8 de plus) : poids 4× plus petits (1 059 octets au lieu de 4 236) et produits scalaires
+  vectoriels Helium, 16 multiplications int8 par instruction. Le temps mesuré inclut la quantification de
+  l'entrée et la déquantification de la sortie.
+- Même la version la plus lente ne pèse rien : une inférence toutes les 2 s occupe le CPU 0,0004 % du temps
+  (int8). La consommation sera dominée par les capteurs et l'attente, pas par l'IA.
+
+**Justesse de la version int8.** Le code C est généré depuis le `.tflite` (`tools/export_cmsis_nn.py`).
+Sur PC, il donne **exactement les mêmes octets** que l'interpréteur TFLite de référence sur 400 vecteurs
+(`firmware/tests_hote/test_mlp_s8.c`). Sur la carte, les décisions int8 et float sont identiques (30/30 relevés).
+Point technique trouvé en route : TFLite (PC) requantifie avec un arrondi simple, TFLite Micro avec un arrondi
+en deux étapes. On a activé `CMSIS_NN_USE_SINGLE_ROUNDING` pour coller au modèle validé. Sans cette option,
+706 sorties sur 3 008 différaient d'1 à 9 LSB.
 
 Méthode : boucle de paquets de 1 000 inférences, répétée jusqu'à dépasser 300 ms (précision < 0,5 % malgré le tick de 1 ms).
 Résultat rappelé dans la console toutes les 30 s.
+
+### Et X-CUBE-AI / le NPU Neural-ART ?
+- **X-CUBE-AI 10.2.1** est installé, avec son moteur ST Edge AI. CubeMX ne l'accepte sur STM32N6 que dans les contextes
+  *Application* (programme démarré depuis la flash externe par le FSBL), pas dans le FSBL qui tourne en RAM et que nous utilisons.
+  Basculer le projet dans cette structure (FSBL + Appli signée en flash externe) changerait tout le flux de programmation.
+- Les noyaux int8 utilisés ici sont **ceux du runtime TFLite Micro de X-CUBE-AI** (CMSIS-NN, fournis dans le pack).
+  C'est donc la même chaîne logicielle que « X-CUBE-AI, runtime TFLM », appelée sans l'interpréteur.
+- Le **NPU** demande en plus le compilateur Neural-ART, livré par l'installeur complet *ST Edge AI Core*
+  (téléchargement avec compte myST). Hypothèse à vérifier : pour un réseau de 1 059 paramètres, le gain serait
+  faible, car le coût fixe de lancement du NPU (configuration, DMA, synchronisation) pourrait dépasser les 8 µs du
+  CPU. Le NPU est conçu pour des réseaux convolutifs de plusieurs millions d'opérations.
 
 ## 8. Reste à faire
 - [x] Cloud — code prêt et vérifié (`matlab/`) : MATLAB == Python à 5·10⁻⁷ près sur les features, 8/8 décisions
   identiques à Keras, script ThingSpeak testé de bout en bout avec un ThingSpeak simulé (lecture → prédiction →
   canal résultats → commande TalkBack). Voir [`matlab/README.md`](../matlab/README.md).
 - [ ] Cloud — création des canaux sur ThingSpeak (compte de l'auteur) et envoi des mesures par la carte (TP2.3, LwIP).
-- [ ] X-CUBE-AI : import du `.tflite` int8 dans CubeMX, temps CPU vs NPU (Neural-ART) comparé au C pur ci-dessus.
+- [x] Edge int8 : `.tflite` int8 exécuté sur la carte avec CMSIS-NN / Helium (runtime de X-CUBE-AI), 8,2 µs, bit-exact.
+- [ ] NPU Neural-ART : installer ST Edge AI Core (compte myST) et passer en structure FSBL + Application.
 - [ ] Consommation : mesure du courant (IDD) en attente / mesure / inférence.

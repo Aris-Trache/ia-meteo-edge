@@ -45,7 +45,9 @@ _Min_Stack_Size = 0x800; /* required amount of stack */
 MEMORY
 {
   ROM    (xrw)    : ORIGIN = 0x34180400,   LENGTH = 255K
-  RAM    (xrw)    : ORIGIN = 0x341C0000,   LENGTH = 256K
+  RAM    (xrw)    : ORIGIN = 0x341C0000,   LENGTH = 192K
+  /* TP2.3 : 64 Ko non cacheables (MPU) pour le DMA Ethernet, voir eth_carte.c */
+  ETHRAM (rw)     : ORIGIN = 0x341F0000,   LENGTH = 64K
 }
 
 /* Sections */
@@ -192,6 +194,14 @@ SECTIONS
   } >RAM
 
   /* Remove information from the compiler libraries */
+  /* TP2.3 : descripteurs DMA + tampons Ethernet (non cacheables, non initialises) */
+  .eth_noncache (NOLOAD) :
+  {
+    . = ALIGN(32);
+    *(.eth_noncache)
+    *(.eth_noncache*)
+  } >ETHRAM
+
   /DISCARD/ :
   {
     libc.a ( * )

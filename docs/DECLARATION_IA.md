@@ -11,11 +11,19 @@
    - TP3 : récupération des données Meteostat, conception des features calculables sur la carte, notebook
      d'études (nombre de classes, historique, taille du réseau, démarrage à froid), exports ONNX / TFLite int8 / C,
      code embarqué des features et de l'inférence, banc de mesure du temps d'inférence, rédaction de `TP3_RESULTATS.md`.
+     Partie Cloud (scripts MATLAB / ThingSpeak, testés sous GNU Octave) ; version int8 CMSIS-NN générée depuis le
+     `.tflite` et vérifiée à l'octet près contre TFLite ; installation de X-CUBE-AI dans CubeMX.
+   - TP2.3 : portage à la main de FreeRTOS V11.1.0 (port Cortex-M55) et LwIP 2.2.1 sur le projet FSBL du STM32N6
+     (absents de CubeMX pour ce composant), pilote Ethernet LwIP ↔ HAL (MPU non cacheable, sécurité RIF, PHY LAN8742)
+     en reprenant la configuration de l'exemple officiel ST ; tâches capteurs/IA et réseau, ping par socket BSD,
+     client HTTP ThingSpeak, serveur echo. Bugs trouvés en test sur carte et corrigés (DHCP lancé sur interface
+     inactive, tampon HTTP trop petit).
    - Mode de travail : l'IA a eu accès au PC de l'auteur pendant une session (compilation et exécution dans
      STM32CubeIDE, lecture de la console série) ; les commits et `git push` sont faits par l'auteur.
 3. **Vérifications et validations humaines** : chaque code a été relu, compris, compilé
    et testé sur carte / Colab par l'auteur. Contrôles automatiques ajoutés : parité features C / Python
    (588 valeurs, écart < 5·10⁻⁵), parité réseau C / Keras (8/8 décisions), ONNX / Keras (écart 1,2·10⁻⁷),
-   pilote capteurs testé sur bus I²C simulé puis sur la carte réelle. Toutes les mesures du rapport TP3
+   pilote capteurs testé sur bus I²C simulé puis sur la carte réelle, réseau int8 CMSIS-NN == TFLite
+   (400 vecteurs, 0 octet différent), MATLAB == Python (5·10⁻⁷). Toutes les mesures du rapport TP3
    (prédictions, temps d'inférence) ont été relevées sur la carte.
 4. **Données personnelles** : non utilisées. Données météo : Meteostat, licence CC BY-NC 4.0.
