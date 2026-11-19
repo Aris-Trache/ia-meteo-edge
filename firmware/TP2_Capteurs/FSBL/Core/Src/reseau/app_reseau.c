@@ -57,6 +57,12 @@
 #define THINGSPEAK_TALKBACK_CLE ""
 #endif
 
+#ifndef THINGSPEAK_CANAL_ID
+#define THINGSPEAK_CANAL_ID     "3579870" /* canal PUBLIC "Meteo Capteurs" : la page recharge son historique */
+#endif
+#ifndef THINGSPEAK_CLE_LECTURE
+#define THINGSPEAK_CLE_LECTURE  ""       /* cle de LECTURE du canal (vide si le canal est public) */
+#endif
 #define HOTE_PING               "google.com"
 #define HOTE_THINGSPEAK         "api.thingspeak.com"
 #define PERIODE_RESEAU_MS       20000U   /* ThingSpeak gratuit : 1 envoi / 15 s max */
@@ -66,6 +72,8 @@
 #define PORT_WEB                80
 #define TAMPON_HORS_LIGNE       90       /* 90 x 20 s = 30 min de mesures gardees sans Internet */
 #define HISTO_WEB               90       /* 90 x 2 s = 3 min de courbe sur la page web */
+#define HISTO_LONG              4320     /* 4320 x 10 s = 12 h gardees PAR LA CARTE (26 Ko) */
+#define HISTO_LONG_PAS          5        /* 1 point long toutes les 5 predictions (10 s) */
 
 static struct netif interface_eth;
 static SemaphoreHandle_t mutex_console;
@@ -101,6 +109,10 @@ void console_liberer(void)
 static int16_t histo_hr[HISTO_WEB], histo_pp[HISTO_WEB], histo_t[HISTO_WEB];
 static uint16_t histo_n, histo_tete;
 static volatile uint32_t nb_predictions;
+/* Historique long : la page le recharge a chaque ouverture (GET /histo) */
+static int16_t hl_T[HISTO_LONG], hl_H[HISTO_LONG], hl_P[HISTO_LONG];
+static uint32_t hl_t[HISTO_LONG];              /* instant du point, en s depuis le demarrage */
+static uint16_t hlg_n, hlg_tete;
 static volatile uint32_t bench_ns[4];          /* float sans caches, float, int8, NPU */
 
 void reseau_publier_mesure(const MeteoPublication_t *m)
@@ -115,6 +127,15 @@ void reseau_publier_mesure(const MeteoPublication_t *m)
     histo_tete = (uint16_t)((histo_tete + 1U) % HISTO_WEB);
     if (histo_n < HISTO_WEB) { histo_n++; }
     nb_predictions++;
+    if ((nb_predictions % HISTO_LONG_PAS) == 1U)
+    {
+      hl_T[hlg_tete] = (int16_t)(m->temp_c * 10.0f);
+      hl_H[hlg_tete] = (int16_t)(m->humidite_rh * 10.0f);
+      hl_P[hlg_tete] = (int16_t)(m->proba[METEO_NB_CLASSES - 1] * 1000.0f);
+      hl_t[hlg_tete] = sys_now() / 1000U;
+      hlg_tete = (uint16_t)((hlg_tete + 1U) % HISTO_LONG);
+      if (hlg_n < HISTO_LONG) { hlg_n++; }
+    }
     xSemaphoreGive(mutex_mesure);
   }
 }
@@ -369,7 +390,9 @@ static int envoyer_entree(const EntreeHorsLigne_t *e, int avec_date, char *rep, 
   if (avec_date && epoch_ref != 0U)
   {
     strcpy(date, "&created_at=");
-    date_iso(epoch_ref + (e->t_ms - tick_ref) / 1000U, date + 12, sizeof(date) - 12U);
+    /* ecart SIGNE : la mesure est en general plus ANCIENNE que la reference d'heure
+       (sinon le calcul non signe deborde et date la mesure ~50 jours dans le futur) */
+    date_iso((uint32_t)((int32_t)epoch_ref + (int32_t)(e->t_ms - tick_ref) / 1000), date + 12, sizeof(date) - 12U);
   }
   /* Champs du canal CAPTEURS (voir matlab/README.md) */
   snprintf(chemin, sizeof(chemin), "/update?api_key=%s&field1=%s&field2=%s&field3=%s&field4=%d&field5=%s%s",
@@ -506,10 +529,11 @@ static int json_etat(char *b, size_t n)
 
   int l = snprintf(b, n, "{\"T\":%s,\"H\":%s,\"P\":%s,\"c\":%d,\"pr\":[%d,%d,%d],\"n\":%lu,"
                    "\"up\":%lu,\"net\":%d,\"att\":%u,\"rat\":%lu,\"ts\":%lu,\"cl\":%d,"
-                   "\"off\":%s,\"f32\":%s,\"s8\":%s,\"npu\":%s,\"hH\":[",
+                   "\"off\":%s,\"f32\":%s,\"s8\":%s,\"npu\":%s,\"ch\":\"%s\",\"rk\":\"%s\",\"hH\":[",
                    t, h, p, m.classe, pr[0], pr[1], pr[2], (unsigned long)nb_predictions,
                    (unsigned long)(sys_now() / 1000U), en_ligne, hl_n, (unsigned long)nb_rattrapees,
-                   (unsigned long)nb_envois_ts, cloud_classe, f[0], f[1], f[2], f[3]);
+                   (unsigned long)nb_envois_ts, cloud_classe, f[0], f[1], f[2], f[3],
+                   THINGSPEAK_CANAL_ID, THINGSPEAK_CLE_LECTURE);
   for (int pass = 0; pass < 3; pass++)
   {
     const int16_t *v = (pass == 0) ? hr : (pass == 1) ? pp : tt;
@@ -532,6 +556,39 @@ static void envoyer_tout(int c, const char *d, size_t n)
     if (k <= 0) { return; }
     d += k; n -= (size_t)k;
   }
+}
+
+/* GET /histo : 12 h d'historique, envoye par morceaux (pas de gros tampon) */
+static void envoyer_histo(int c)
+{
+  static char b[1100];
+  static const char *NOMS[4] = { "t", "T", "H", "P" };
+  uint16_t n, tete;
+  int l;
+  xSemaphoreTake(mutex_mesure, portMAX_DELAY);
+  n = hlg_n; tete = hlg_tete;
+  xSemaphoreGive(mutex_mesure);
+  l = snprintf(b, sizeof(b), "HTTP/1.0 200 OK\r\nContent-Type: application/json\r\n"
+               "Cache-Control: no-store\r\nConnection: close\r\n\r\n{");
+  for (int k = 0; k < 4; k++)
+  {
+    l += snprintf(b + l, sizeof(b) - (size_t)l, "%s\"%s\":[", k ? "]," : "", NOMS[k]);
+    for (uint16_t i = 0; i < n; i++)
+    {
+      uint16_t j = (uint16_t)((tete + HISTO_LONG - n + i) % HISTO_LONG);
+      const char *sep = i ? "," : "";
+      if (k == 0) { l += snprintf(b + l, sizeof(b) - (size_t)l, "%s%lu", sep, (unsigned long)hl_t[j]); }
+      else
+      {
+        int16_t x = (k == 1) ? hl_T[j] : (k == 2) ? hl_H[j] : hl_P[j];
+        l += snprintf(b + l, sizeof(b) - (size_t)l, "%s%s%d.%d", sep, (x < 0) ? "-" : "",
+                      (x < 0 ? -x : x) / 10, (x < 0 ? -x : x) % 10);
+      }
+      if (l > (int)sizeof(b) - 40) { envoyer_tout(c, b, (size_t)l); l = 0; }
+    }
+  }
+  l += snprintf(b + l, sizeof(b) - (size_t)l, "]}");
+  envoyer_tout(c, b, (size_t)l);
 }
 
 static void tache_web(void *arg)
@@ -560,6 +617,12 @@ static void tache_web(void *arg)
     {
       req[n] = '\0';
       const char *corps; size_t lg; const char *type;
+      if (strncmp(req, "GET /histo", 10) == 0)
+      {
+        envoyer_histo(c);
+        closesocket(c);
+        continue;
+      }
       if (strncmp(req, "GET /api", 8) == 0)
       {
         lg = (size_t)json_etat(json, sizeof(json)); corps = json; type = "application/json";

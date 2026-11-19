@@ -87,9 +87,9 @@ dans le code C, avec **le même code** testé contre Python (écart max 4,9·10�
 
 | Classe | Exemple |
 |---|---|
-| ☀️ Dégagé | ciel clair, peu nuageux |
+| ☀️ Dégagé | ciel clair, beau temps |
 | ☁️ Nuageux-Couvert | nuageux, couvert, brouillard |
-| 🌧️ Précipitations | pluie, averses, neige |
+| 🌧️ Précipitations | pluie, averses, neige, orage, grêle |
 
 La sortie est une **probabilité par classe** (softmax), par exemple `Dégagé 19 % · Nuageux 56 % · Précipitations 25 %`.
 

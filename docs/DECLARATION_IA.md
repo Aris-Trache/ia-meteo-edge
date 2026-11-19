@@ -21,6 +21,8 @@
    - TP3 NPU : compilation du modèle int8 pour le NPU avec ST Edge AI Core (profil mémoire), intégration du
      runtime ST `ll_aton` dans le FSBL (horloge, droits RIF, zone mémoire dédiée), écriture des opérations
      logicielles (quantification, softmax), banc de mesure NPU vs CPU. Résultats relevés sur la carte.
+   - Démo : serveur web embarqué (page + API JSON), mode hors ligne avec renvoi daté des mesures,
+     vérification de la réaction du modèle à l'humidité. Testés sur la carte par l'auteur.
    - Mode de travail : l'IA a eu accès au PC de l'auteur pendant une session (compilation et exécution dans
      STM32CubeIDE, lecture de la console série) ; les commits et `git push` sont faits par l'auteur.
 3. **Vérifications et validations humaines** : chaque code a été relu, compris, compilé
