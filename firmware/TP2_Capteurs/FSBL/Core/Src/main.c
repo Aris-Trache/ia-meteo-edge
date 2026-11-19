@@ -27,6 +27,7 @@
 #include "meteo/meteo_features.h"
 #include "meteo/meteo_mlp_ref.h"
 #include "meteo/meteo_mlp_s8.h"
+#include "meteo/meteo_prev3h.h"   /* IA de prevision a 3 h */
 #include "reseau/app_reseau.h"
 #include "reseau/eth_carte.h"
 #include "npu/npu_meteo.h"
@@ -467,11 +468,13 @@ static void etape_ia_meteo(void)
   int classe_s8 = meteo_mlp_s8_predire(norm, proba_s8);   /* meme entree, reseau int8 */
   float proba_npu[METEO_NB_CLASSES];
   int classe_npu = npu_ok ? npu_meteo_predire(norm, proba_npu) : -1;   /* meme entree, NPU */
+  float proba_3h[METEO_NB_CLASSES];
+  int classe_3h = meteo_prev3h_predire(norm, proba_3h);   /* meme entree, IA de prevision a 3 h */
 #if TP2_PARTIE != 4
   BSP_LED_Off(LED_BLUE);
 #else
   MeteoPublication_t pub = { 1, t, m.humidite_rh, p_mer, classe, proba[METEO_NB_CLASSES - 1],
-                            { proba[0], proba[1], proba[2] } };
+                            { proba[0], proba[1], proba[2] }, classe_3h, { proba_3h[0], proba_3h[1], proba_3h[2] } };
   reseau_publier_mesure(&pub);                /* envoyee au Cloud par la tache reseau */
 #endif
   BSP_LED_On(LED_GREEN);
@@ -488,6 +491,8 @@ static void etape_ia_meteo(void)
     printf("%s %lu%%%s", METEO_CLASS_NAMES[i], (unsigned long)(proba[i] * 100.0f + 0.5f),
            (i < METEO_NB_CLASSES - 1) ? ", " : ")\r\n");
   }
+  printf("      Dans 3 h : %s (%lu%%, pluie %lu%%)\r\n", METEO_CLASS_NAMES[classe_3h],
+         (unsigned long)(proba_3h[classe_3h] * 100.0f + 0.5f), (unsigned long)(proba_3h[2] * 100.0f + 0.5f));
   if (classe_s8 >= 0)
   {
     printf("      int8 : %s (%lu%%)%s\r\n", METEO_CLASS_NAMES[classe_s8],

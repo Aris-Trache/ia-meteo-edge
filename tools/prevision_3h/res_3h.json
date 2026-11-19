@@ -1,0 +1,1 @@
+{"horizon_h": 3, "n_test": 91447, "modele": {"acc": 0.607, "bacc": 0.605, "f1": 0.585}, "persistance": {"acc": 0.804, "bacc": 0.787, "f1": 0.787}, "ia_actuelle_comme_prevision": {"acc": 0.59, "bacc": 0.596, "f1": 0.572}, "rappel_pluie": 0.631, "precision_pluie": 0.46, "rappel_pluie_persist": 0.741, "mu_identique": true}

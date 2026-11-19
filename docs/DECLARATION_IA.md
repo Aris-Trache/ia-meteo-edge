@@ -23,6 +23,8 @@
      logicielles (quantification, softmax), banc de mesure NPU vs CPU. Résultats relevés sur la carte.
    - Démo : serveur web embarqué (page + API JSON), mode hors ligne avec renvoi daté des mesures,
      vérification de la réaction du modèle à l'humidité. Testés sur la carte par l'auteur.
+   - Prévision à 3 h : script d'entraînement (étiquette décalée de 3 h), comparaison à la persistance,
+     export C et intégration sur la carte. Parité C/Keras vérifiée (8/8).
    - Mode de travail : l'IA a eu accès au PC de l'auteur pendant une session (compilation et exécution dans
      STM32CubeIDE, lecture de la console série) ; les commits et `git push` sont faits par l'auteur.
 3. **Vérifications et validations humaines** : chaque code a été relu, compris, compilé

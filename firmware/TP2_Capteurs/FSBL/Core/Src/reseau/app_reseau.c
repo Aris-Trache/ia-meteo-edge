@@ -529,10 +529,11 @@ static int json_etat(char *b, size_t n)
 
   int l = snprintf(b, n, "{\"T\":%s,\"H\":%s,\"P\":%s,\"c\":%d,\"pr\":[%d,%d,%d],\"n\":%lu,"
                    "\"up\":%lu,\"net\":%d,\"att\":%u,\"rat\":%lu,\"ts\":%lu,\"cl\":%d,"
-                   "\"off\":%s,\"f32\":%s,\"s8\":%s,\"npu\":%s,\"ch\":\"%s\",\"rk\":\"%s\",\"hH\":[",
+                   "\"off\":%s,\"f32\":%s,\"s8\":%s,\"npu\":%s,\"c3\":%d,\"p3\":[%d,%d,%d],\"ch\":\"%s\",\"rk\":\"%s\",\"hH\":[",
                    t, h, p, m.classe, pr[0], pr[1], pr[2], (unsigned long)nb_predictions,
                    (unsigned long)(sys_now() / 1000U), en_ligne, hl_n, (unsigned long)nb_rattrapees,
-                   (unsigned long)nb_envois_ts, cloud_classe, f[0], f[1], f[2], f[3],
+                   (unsigned long)nb_envois_ts, cloud_classe, f[0], f[1], f[2], f[3], m.classe_3h,
+                   (int)(m.proba_3h[0] * 100.0f + 0.5f), (int)(m.proba_3h[1] * 100.0f + 0.5f), (int)(m.proba_3h[2] * 100.0f + 0.5f),
                    THINGSPEAK_CANAL_ID, THINGSPEAK_CLE_LECTURE);
   for (int pass = 0; pass < 3; pass++)
   {

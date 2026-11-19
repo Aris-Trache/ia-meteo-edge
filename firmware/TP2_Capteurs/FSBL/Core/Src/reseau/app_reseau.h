@@ -22,6 +22,8 @@ typedef struct
   int   classe;            /* 0 Degage, 1 Nuageux-Couvert, 2 Precipitations */
   float proba_precip;      /* 0..1 */
   float proba[3];          /* probabilites des 3 classes (page web) */
+  int   classe_3h;         /* prevision : classe DANS 3 H */
+  float proba_3h[3];
 } MeteoPublication_t;
 
 /* Cree les taches (reseau + capteurs/IA) puis demarre l'ordonnanceur. Ne revient pas. */

@@ -17,6 +17,7 @@ La carte mesure **température, humidité, pression**. Une petite IA embarquée 
 | ⏱️ Temps d'une prédiction | **8,2 µs** (int8, accélération Helium du Cortex-M55) |
 | 🚀 Gain d'optimisation | **×98** par rapport au code de départ (808 µs) |
 | 🎯 Qualité du modèle | **F1 macro 0,606** · **7 pluies sur 10 détectées** |
+| 🔮 Prévision à 3 h | 2ᵉ IA sur la carte : **6 pluies sur 10 prévues 3 h à l'avance** (F1 0,585) |
 | 🔋 Énergie (estimation) | 1 prédiction locale ≈ **2,5 µJ** contre ≈ 30–60 mJ pour 1 envoi au Cloud → **≈ 10 000× moins** |
 | 📡 Sans Internet | l'IA continue, les mesures sont gardées puis renvoyées **avec leur date** |
 | 🌐 Page web | servie **par la carte elle-même**, en direct |
@@ -93,6 +94,9 @@ dans le code C, avec **le même code** testé contre Python (écart max 4,9·10�
 
 La sortie est une **probabilité par classe** (softmax), par exemple `Dégagé 19 % · Nuageux 56 % · Précipitations 25 %`.
 
+> **Maintenant ou plus tard ?** L'IA principale donne la météo **du moment** : les 6 h servent d'entrée (tendances), pas d'horizon.
+> Une **2ᵉ IA** (même réseau, mêmes entrées) prédit la météo **dans 3 h** → [docs/PREVISION_3H.md](docs/PREVISION_3H.md).
+
 ### 4.3 Le réseau
 
 ```
@@ -123,6 +127,7 @@ La sortie est une **probabilité par classe** (softmax), par exemple `Dégagé 1
 | Réseau | **Ethernet + LwIP + FreeRTOS** portés à la main | CubeMX ne les propose pas pour le projet FSBL du STM32N6 |
 | Cloud | **ThingSpeak + MATLAB** | gratuit, analyse MATLAB intégrée, TalkBack pour répondre à la carte |
 | Coupure réseau | **mémoire de 30 min** + renvoi daté | une station météo ne doit rien perdre. L'heure est lue dans les réponses ThingSpeak, sans horloge temps réel |
+| Prévision | **2ᵉ IA « dans 3 h »**, mêmes entrées | F1 0,585 contre 0,572 si on réutilise l'IA du moment ; mesuré honnêtement contre la persistance (0,787, mais qui exige de connaître la vraie météo) |
 | Visualisation | **page web servie par la carte** | démonstration sans Internet ni logiciel à installer |
 
 ---
@@ -189,6 +194,7 @@ La sortie est une **probabilité par classe** (softmax), par exemple `Dégagé 1
 - [x] **TP3** : IA embarquée : float32 14,7 µs, **int8 8,2 µs**, NPU 57 µs → [NPU](docs/TP3_NPU.md)
 - [x] **TP3** : boucle Edge ↔ Cloud complète (ThingSpeak + MATLAB + TalkBack)
 - [x] **TP3** : consommation : estimation + protocole → [document](docs/CONSOMMATION.md)
+- [x] **Prévision à 3 h** : 2ᵉ IA embarquée, F1 0,585, 6 pluies sur 10 prévues → [détails](docs/PREVISION_3H.md)
 - [x] **Démo** : page web dans la carte, mode hors ligne, test du souffle → [détails](docs/DEMO_EDGE.md)
 - [ ] **TP4** : pitch de 3 min
 
