@@ -1,4 +1,4 @@
-# 🌦️ IA Météo Edge
+#  IA Météo Edge
 
 **Une carte électronique qui prédit la météo toute seule, en 8 microsecondes, même sans Internet.**
 
@@ -14,13 +14,13 @@ La carte mesure **température, humidité, pression**. Une petite IA embarquée 
 
 | | |
 |---|---|
-| ⏱️ Temps d'une prédiction | **8,2 µs** (int8, accélération Helium du Cortex-M55) |
-| 🚀 Gain d'optimisation | **×98** par rapport au code de départ (808 µs) |
-| 🎯 Qualité du modèle | **F1 macro 0,606** · **7 pluies sur 10 détectées** |
-| 🔮 Prévision à 3 h | 2ᵉ IA sur la carte : **6 pluies sur 10 prévues 3 h à l'avance** (F1 0,585) |
-| 🔋 Énergie (estimation) | 1 prédiction locale ≈ **2,5 µJ** contre ≈ 30–60 mJ pour 1 envoi au Cloud → **≈ 10 000× moins** |
-| 📡 Sans Internet | l'IA continue, les mesures sont gardées puis renvoyées **avec leur date** |
-| 🌐 Page web | servie **par la carte elle-même**, en direct |
+|  Temps d'une prédiction | **8,2 µs** (int8, accélération Helium du Cortex-M55) |
+|  Gain d'optimisation | **×98** par rapport au code de départ (808 µs) |
+|  Qualité du modèle | **F1 macro 0,606** · **7 pluies sur 10 détectées** |
+|  Prévision à 3 h | 2ᵉ IA sur la carte : **6 pluies sur 10 prévues 3 h à l'avance** (F1 0,585) |
+|  Énergie (estimation) | 1 prédiction locale ≈ **2,5 µJ** contre ≈ 30–60 mJ pour 1 envoi au Cloud → **≈ 10 000× moins** |
+|  Sans Internet | l'IA continue, les mesures sont gardées puis renvoyées **avec leur date** |
+|  Page web | servie **par la carte elle-même**, en direct |
 
 ---
 
@@ -40,12 +40,12 @@ Détails et tests : [docs/DEMO_EDGE.md](docs/DEMO_EDGE.md)
 
 ```mermaid
 flowchart LR
-  C["🌡️ Capteurs<br/>SHT40 · LPS22DF · STTS22H"] -- I²C --> M["STM32N6<br/>Cortex-M55 600 MHz<br/>FreeRTOS + LwIP"]
+  C[" Capteurs<br/>SHT40 · LPS22DF · STTS22H"] -- I²C --> M["STM32N6<br/>Cortex-M55 600 MHz<br/>FreeRTOS + LwIP"]
   M -- "IA locale<br/>8,2 µs" --> M
-  M -- "Ethernet · HTTP" --> T["☁️ ThingSpeak<br/>canal « Meteo Capteurs »"]
+  M -- "Ethernet · HTTP" --> T[" ThingSpeak<br/>canal « Meteo Capteurs »"]
   T --> A["IA MATLAB<br/>(même réseau, ONNX)<br/>toutes les 10 min"]
   A -- "TalkBack<br/>METEO:classe:%" --> M
-  M -- "page web :80" --> P["💻 Navigateur"]
+  M -- "page web :80" --> P[" Navigateur"]
 ```
 
 | Brique | Rôle |
@@ -136,16 +136,16 @@ La sortie est une **probabilité par classe** (softmax), par exemple `Dégagé 1
 
 | Risque | Ce qui pouvait mal tourner | Parade |
 |---|---|---|
-| 🎭 Score gonflé | découpage aléatoire : deux heures voisines en entraînement ET en test | découpage **par années** |
-| 📏 Pression décalée | le capteur mesure la pression **absolue** (~985 hPa), Meteostat donne celle **au niveau de la mer** (~1013 hPa) | correction d'altitude sur la carte, sinon 28 hPa d'erreur |
-| 🥶 Carte « amnésique » | aucun historique au démarrage | entraînement avec 15 % d'exemples sans historique |
-| 🔢 Perte en int8 | les poids compressés changent les décisions | contrôle : 0 octet différent entre CMSIS-NN et TFLite (400 vecteurs), 100 % d'accord sur la carte |
-| 🧩 Code C ≠ Python | une entrée mal calculée = une IA fausse | tests automatiques de parité (`firmware/tests_hote/`) |
-| 🐢 NPU « magique » | croire que le NPU accélère tout | **mesuré** : 57 µs contre 8,2 µs sur CPU, donc choix argumenté |
-| 🌐 Pas de FreeRTOS/LwIP dans CubeMX | réseau impossible à générer | portage manuel en reprenant l'exemple officiel ST |
-| 🐞 DHCP muet | l'interface réseau n'était pas « up » | `netif_set_up()` avant `dhcp_start()` |
-| 🔑 Fuite de clé | clé ThingSpeak poussée sur GitHub | fichier `secrets_thingspeak.h` **ignoré par git**, exemple neutre versionné |
-| 📴 Internet coupé en démo | perte de données, démo cassée | mode hors ligne + rattrapage, **testé** |
+|  Score gonflé | découpage aléatoire : deux heures voisines en entraînement ET en test | découpage **par années** |
+|  Pression décalée | le capteur mesure la pression **absolue** (~985 hPa), Meteostat donne celle **au niveau de la mer** (~1013 hPa) | correction d'altitude sur la carte, sinon 28 hPa d'erreur |
+|  Carte « amnésique » | aucun historique au démarrage | entraînement avec 15 % d'exemples sans historique |
+|  Perte en int8 | les poids compressés changent les décisions | contrôle : 0 octet différent entre CMSIS-NN et TFLite (400 vecteurs), 100 % d'accord sur la carte |
+|  Code C ≠ Python | une entrée mal calculée = une IA fausse | tests automatiques de parité (`firmware/tests_hote/`) |
+|  NPU « magique » | croire que le NPU accélère tout | **mesuré** : 57 µs contre 8,2 µs sur CPU, donc choix argumenté |
+|  Pas de FreeRTOS/LwIP dans CubeMX | réseau impossible à générer | portage manuel en reprenant l'exemple officiel ST |
+|  DHCP muet | l'interface réseau n'était pas « up » | `netif_set_up()` avant `dhcp_start()` |
+|  Fuite de clé | clé ThingSpeak poussée sur GitHub | fichier `secrets_thingspeak.h` **ignoré par git**, exemple neutre versionné |
+|  Internet coupé en démo | perte de données, démo cassée | mode hors ligne + rattrapage, **testé** |
 
 ---
 
