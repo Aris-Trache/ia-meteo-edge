@@ -41,7 +41,7 @@ extern unsigned char lwip_ram_heap[];
 #endif
 #define MEMP_NUM_PBUF                   16
 #define MEMP_NUM_UDP_PCB                6
-#define MEMP_NUM_TCP_PCB                6
+#define MEMP_NUM_TCP_PCB                10   /* + serveur web (navigateur toutes les 2 s) */
 #define MEMP_NUM_TCP_PCB_LISTEN         2
 #define MEMP_NUM_TCP_SEG                16
 #define MEMP_NUM_NETCONN                8

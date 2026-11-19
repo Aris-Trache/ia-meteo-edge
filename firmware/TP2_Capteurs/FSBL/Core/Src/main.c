@@ -29,6 +29,7 @@
 #include "meteo/meteo_mlp_s8.h"
 #include "reseau/app_reseau.h"
 #include "reseau/eth_carte.h"
+#include "npu/npu_meteo.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -77,6 +78,9 @@ static uint32_t meteo_nb_mesures = 0U;
 static uint32_t bench_ns_off = 0U, bench_ns_on = 0U;   /* duree d'une inference float [ns] */
 static uint32_t bench_ns_s8 = 0U;                      /* idem, reseau int8 CMSIS-NN [ns] */
 static uint32_t nb_accord_s8 = 0U;                     /* predictions float == int8 */
+static uint32_t bench_ns_npu = 0U;                     /* idem, NPU Neural-ART [ns] */
+static uint32_t nb_accord_npu = 0U;                    /* predictions float == NPU */
+static int npu_ok = 0;
 static uint32_t nb_predictions = 0U;
 
 /* Sequence du chenillard : ordre des LEDs et nom affiche dans les logs.
@@ -208,10 +212,17 @@ int main(void)
   /* TP3 3.c : meme reseau quantifie int8, noyaux CMSIS-NN (runtime TFLite Micro de X-CUBE-AI) */
   bench_ns_s8  = mesurer_temps_inference("caches ON ", meteo_mlp_s8_predire, "int8 CMSIS-NN");
   printf("   (noyaux CMSIS-NN compiles pour : %s)\r\n", meteo_mlp_s8_backend());
+  /* Meme reseau int8 sur l'accelerateur NPU Neural-ART (code genere par ST Edge AI Core) */
+  npu_ok = (npu_meteo_init() == 0);
+  if (npu_ok)
+  {
+    bench_ns_npu = mesurer_temps_inference("caches ON ", npu_meteo_predire, "NPU Neural-ART");
+  }
 #endif
 
 #if TP2_PARTIE == 4
   /* TP2.3 : a partir d'ici FreeRTOS prend la main (cette fonction ne revient pas) */
+  reseau_publier_bench(bench_ns_off, bench_ns_on, bench_ns_s8, bench_ns_npu);
   reseau_lancer(tache_capteurs_ia, 2048U);
 #endif
 
@@ -454,10 +465,13 @@ static void etape_ia_meteo(void)
   int classe = meteo_mlp_ref_predire(norm, proba);
   float proba_s8[METEO_NB_CLASSES];
   int classe_s8 = meteo_mlp_s8_predire(norm, proba_s8);   /* meme entree, reseau int8 */
+  float proba_npu[METEO_NB_CLASSES];
+  int classe_npu = npu_ok ? npu_meteo_predire(norm, proba_npu) : -1;   /* meme entree, NPU */
 #if TP2_PARTIE != 4
   BSP_LED_Off(LED_BLUE);
 #else
-  MeteoPublication_t pub = { 1, t, m.humidite_rh, p_mer, classe, proba[METEO_NB_CLASSES - 1] };
+  MeteoPublication_t pub = { 1, t, m.humidite_rh, p_mer, classe, proba[METEO_NB_CLASSES - 1],
+                            { proba[0], proba[1], proba[2] } };
   reseau_publier_mesure(&pub);                /* envoyee au Cloud par la tache reseau */
 #endif
   BSP_LED_On(LED_GREEN);
@@ -480,6 +494,13 @@ static void etape_ia_meteo(void)
            (unsigned long)(proba_s8[classe_s8] * 100.0f + 0.5f),
            (classe_s8 == classe) ? "" : "  <- DIFFERENT du float");
     nb_accord_s8 += (classe_s8 == classe) ? 1U : 0U;
+  }
+  if (classe_npu >= 0)
+  {
+    printf("      NPU  : %s (%lu%%)%s\r\n", METEO_CLASS_NAMES[classe_npu],
+           (unsigned long)(proba_npu[classe_npu] * 100.0f + 0.5f),
+           (classe_npu == classe) ? "" : "  <- DIFFERENT du float");
+    nb_accord_npu += (classe_npu == classe) ? 1U : 0U;
   }
   if ((++nb_predictions % 15U) == 0U)          /* toutes les 30 s */
   {
@@ -543,13 +564,15 @@ static void tache_capteurs_ia(void *arg)
 static void afficher_bench(void)
 {
   printf("   [bench] float32 %s : caches OFF %lu.%02lu us, ON %lu.%02lu us | int8 CMSIS-NN (%s) : %lu.%02lu us"
-         " | accord float/int8 %lu/%lu\r\n",
+         " | NPU %lu.%02lu us | accord float/int8 %lu/%lu, float/NPU %lu/%lu\r\n",
          meteo_mlp_ref_optim(),
          (unsigned long)(bench_ns_off / 1000U), (unsigned long)((bench_ns_off % 1000U) / 10U),
          (unsigned long)(bench_ns_on / 1000U),  (unsigned long)((bench_ns_on % 1000U) / 10U),
          meteo_mlp_s8_backend(),
          (unsigned long)(bench_ns_s8 / 1000U),  (unsigned long)((bench_ns_s8 % 1000U) / 10U),
-         (unsigned long)nb_accord_s8, (unsigned long)nb_predictions);
+         (unsigned long)(bench_ns_npu / 1000U), (unsigned long)((bench_ns_npu % 1000U) / 10U),
+         (unsigned long)nb_accord_s8, (unsigned long)nb_predictions,
+         (unsigned long)nb_accord_npu, (unsigned long)nb_predictions);
 }
 
 /**

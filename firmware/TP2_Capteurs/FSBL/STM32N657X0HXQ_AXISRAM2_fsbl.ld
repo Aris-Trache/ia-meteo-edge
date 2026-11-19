@@ -45,6 +45,9 @@ _Min_Stack_Size = 0x800; /* required amount of stack */
 MEMORY
 {
   ROM    (xrw)    : ORIGIN = 0x34180400,   LENGTH = 255K
+  /* NPU : 0x34100000-0x3410FFFF = zone memoire du reseau sur le NPU (tools/npu/meteo_n6.mpool),
+           0x34110000-0x3417FFFF = code du runtime NPU (le FSBL est limite a 255 Ko) */
+  NPUCODE (rx)    : ORIGIN = 0x34110000,   LENGTH = 448K
   RAM    (xrw)    : ORIGIN = 0x341C0000,   LENGTH = 192K
   /* TP2.3 : 64 Ko non cacheables (MPU) pour le DMA Ethernet, voir eth_carte.c */
   ETHRAM (rw)     : ORIGIN = 0x341F0000,   LENGTH = 64K
@@ -53,6 +56,17 @@ MEMORY
 /* Sections */
 SECTIONS
 {
+  /* Code et constantes du runtime NPU de ST (ll_aton) + reseau genere : hors des 255 Ko du FSBL */
+  .npu_text :
+  {
+    . = ALIGN(32);
+    *ll_aton*.o(.text .text* .rodata .rodata*)
+    *meteo_npu*.o(.text .text* .rodata .rodata*)
+    *app_reseau.o(.rodata .rodata*) *npu_sw_ops.o(.text .text* .rodata .rodata*)
+    . = ALIGN(32);
+  } >NPUCODE
+
+
   /* The startup code into "ROM" Rom type memory */
   .isr_vector :
   {

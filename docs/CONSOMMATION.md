@@ -52,11 +52,9 @@ Matériel : multimètre en ampèremètre (calibre mA), ou analyseur de puissance
    (testeur USB) en modes C et D : la différence donne la part Ethernet.
 7. Noter chaque valeur 3 fois, faire la moyenne, et compléter le tableau du §1.
 
-## 4. NPU Neural-ART (perspective)
+## 4. NPU Neural-ART (testé sur la carte)
 
-Le STM32N657 contient un accélérateur Neural-ART (jusqu'à 600 GOPS). Notre MLP est
-minuscule (≈ quelques milliers d'opérations) : il tourne déjà en 8 µs sur le CPU, et le
-temps de configuration du NPU dépasserait le calcul lui-même. Le NPU devient intéressant
-pour des réseaux convolutifs (images, audio). Le déployer demande ST Edge AI Core
-(compte myST) et un projet « Appli » (le FSBL de nos TP ne le permet pas dans CubeMX) :
-c'est la suite logique du projet, non réalisée ici.
+Le réseau a été porté sur le NPU (branche `npu`, voir [TP3_NPU.md](TP3_NPU.md)) : mêmes décisions,
+mais **57 µs** par inférence contre **8,2 µs** sur le CPU int8. Pour un MLP aussi petit, le coût fixe
+du NPU dépasse le calcul : il consommerait donc *plus* d'énergie par prédiction que le CPU.
+Le CPU + Helium reste le meilleur choix ici ; le NPU devient rentable pour des réseaux convolutifs.

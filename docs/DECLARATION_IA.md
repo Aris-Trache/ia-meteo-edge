@@ -18,12 +18,15 @@
      en reprenant la configuration de l'exemple officiel ST ; tâches capteurs/IA et réseau, ping par socket BSD,
      client HTTP ThingSpeak, serveur echo. Bugs trouvés en test sur carte et corrigés (DHCP lancé sur interface
      inactive, tampon HTTP trop petit).
+   - TP3 NPU : compilation du modèle int8 pour le NPU avec ST Edge AI Core (profil mémoire), intégration du
+     runtime ST `ll_aton` dans le FSBL (horloge, droits RIF, zone mémoire dédiée), écriture des opérations
+     logicielles (quantification, softmax), banc de mesure NPU vs CPU. Résultats relevés sur la carte.
    - Mode de travail : l'IA a eu accès au PC de l'auteur pendant une session (compilation et exécution dans
      STM32CubeIDE, lecture de la console série) ; les commits et `git push` sont faits par l'auteur.
 3. **Vérifications et validations humaines** : chaque code a été relu, compris, compilé
    et testé sur carte / Colab par l'auteur. Contrôles automatiques ajoutés : parité features C / Python
    (588 valeurs, écart < 5·10⁻⁵), parité réseau C / Keras (8/8 décisions), ONNX / Keras (écart 1,2·10⁻⁷),
    pilote capteurs testé sur bus I²C simulé puis sur la carte réelle, réseau int8 CMSIS-NN == TFLite
-   (400 vecteurs, 0 octet différent), MATLAB == Python (5·10⁻⁷). Toutes les mesures du rapport TP3
+   (400 vecteurs, 0 octet différent), NPU == CPU (15/15 décisions), MATLAB == Python (5·10⁻⁷). Toutes les mesures du rapport TP3
    (prédictions, temps d'inférence) ont été relevées sur la carte.
 4. **Données personnelles** : non utilisées. Données météo : Meteostat, licence CC BY-NC 4.0.
