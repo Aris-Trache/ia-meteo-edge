@@ -1,13 +1,11 @@
 # Déclaration d'usage de l'IA (Charte USMB — Annexe A)
 
 1. **Outil et version** : Claude (Anthropic), modèle Claude Opus 5.5, novembre 2026.
-   **Objectif** : accompagnement pédagogique, explications, aide à la structuration du code
+   **Objectif** : accompagnement pédagogique, explications, aide à la structuration de certains codes
    et à la rédaction de la documentation. Usage autorisé par l'enseignant.
 2. **Étapes & prompts principaux** :
-   - TP1 : structure du notebook MNIST (protocole, boucle d'expériences), analyse des résultats et rédaction de `TP1_RESULTATS.md`. Expériences exécutées sur Colab par l'auteur, choix validés par l'auteur.
-   - TP2 : configuration CubeMX (I²C1, broches, pull-up) guidée pas à pas ; code du chenillard, des logs UART
-     et du pilote capteurs (`capteurs.c`, couche plateforme des drivers ST). Diagnostic de la carte capteurs
-     (IKS4A1 identifiée par scan I²C) et adaptation du pilote aux deux cartes.
+   - TP1 : structure du notebook MNIST (protocole, boucle d'expériences), de `TP1_RESULTATS.md`.  Analyse des résultats, rédaction et expériences exécutées sur Colab par l'auteur, choix validés par l'auteur.
+   - TP2 : Aide à configuration CubeMX (I²C1, broches, pull-up) ; code du chenillard. Diagnostic de la carte capteurs et adaptation du pilote aux deux cartes.
    - TP3 : récupération des données Meteostat, conception des features calculables sur la carte, notebook
      d'études (nombre de classes, historique, taille du réseau, démarrage à froid), exports ONNX / TFLite int8 / C,
      code embarqué des features et de l'inférence, banc de mesure du temps d'inférence, rédaction de `TP3_RESULTATS.md`.
