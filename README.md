@@ -18,6 +18,7 @@ La carte mesure **température, humidité, pression**. Une petite IA embarquée 
 |  Gain d'optimisation | **×98** par rapport au code de départ (808 µs) |
 |  Qualité du modèle | **F1 macro 0,606** · **7 pluies sur 10 détectées** |
 |  Prévision à 3 h | 2ᵉ IA sur la carte : **6 pluies sur 10 prévues 3 h à l'avance** (F1 0,585) |
+|  Heure et saison (branche `saison`) | 4 entrées en plus : **F1 0,626** maintenant, **0,600** dans 3 h → [étude](docs/SAISON.md) |
 |  Énergie (estimation) | 1 prédiction locale ≈ **2,5 µJ** contre ≈ 30–60 mJ pour 1 envoi au Cloud → **≈ 10 000× moins** |
 |  Sans Internet | l'IA continue, les mesures sont gardées puis renvoyées **avec leur date** |
 |  Page web | servie **par la carte elle-même**, en direct |
@@ -126,6 +127,7 @@ La sortie est une **probabilité par classe** (softmax), par exemple `Dégagé 1
 | CPU ou NPU ? | **CPU + Helium** | testé sur le NPU Neural-ART : mêmes décisions mais **57 µs**. Sur un réseau aussi petit, le coût fixe du NPU dépasse le calcul. Le NPU est validé et prêt pour un futur modèle plus gros → [docs/TP3_NPU.md](docs/TP3_NPU.md) |
 | Réseau | **Ethernet + LwIP + FreeRTOS** portés à la main | CubeMX ne les propose pas pour le projet FSBL du STM32N6 |
 | Cloud | **ThingSpeak + MATLAB** | gratuit, analyse MATLAB intégrée, TalkBack pour répondre à la carte |
+| Heure et saison | **ajoutées sur la branche `saison`** | +0,022 de F1 maintenant, +0,015 dans 3 h ; la saison seule n'apporte rien (la température la capte déjà), c'est l'heure qui compte. Heure lue sur ThingSpeak, sinon date de compilation |
 | Coupure réseau | **mémoire de 30 min** + renvoi daté | une station météo ne doit rien perdre. L'heure est lue dans les réponses ThingSpeak, sans horloge temps réel |
 | Prévision | **2ᵉ IA « dans 3 h »**, mêmes entrées | F1 0,585 contre 0,572 si on réutilise l'IA du moment ; mesuré honnêtement contre la persistance (0,787, mais qui exige de connaître la vraie météo) |
 | Visualisation | **page web servie par la carte** | démonstration sans Internet ni logiciel à installer |
@@ -196,6 +198,7 @@ La sortie est une **probabilité par classe** (softmax), par exemple `Dégagé 1
 - [x] **TP3** : consommation : estimation + protocole → [document](docs/CONSOMMATION.md)
 - [x] **Prévision à 3 h** : 2ᵉ IA embarquée, F1 0,585, 6 pluies sur 10 prévues → [détails](docs/PREVISION_3H.md)
 - [x] **Démo** : page web dans la carte, mode hors ligne, test du souffle → [détails](docs/DEMO_EDGE.md)
+- [x] **Heure et saison en entrée** (branche `saison`) : F1 0,604 → 0,626 → [étude](docs/SAISON.md)
 - [ ] **TP4** : pitch de 3 min
 
 ---
