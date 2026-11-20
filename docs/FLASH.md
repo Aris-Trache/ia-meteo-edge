@@ -6,8 +6,8 @@ dans la **flash externe** de la Nucleo (adresse 0x70000000), la copie en RAM (0x
 ## Ce que change cette branche (par rapport à `npu`)
 - `.cproject` : configuration Debug compilée en **-Os** (au lieu de -O0). Les fichiers d'IA gardent leur `#pragma O3`.
 - `STM32N657X0HXQ_AXISRAM2_fsbl.ld` : plus de zone `.npu_text` ; tout le programme tient dans les 255 Ko
-  (≈ 194 Ko, vérifié par compilation), en **une seule image**, comme l'exige la ROM de boot.
-- Le code est identique : IA (float, int8, NPU, dans 3 h), réseau, page web, mode hors ligne.
+  (≈ 205 Ko avec la branche saison fusionnée, vérifié par compilation), en **une seule image**, comme l'exige la ROM de boot.
+- Le code est celui de `npu` + `saison` (IA avec heure et date, voir SAISON.md) : IA (float, int8, NPU, dans 3 h), réseau, page web, mode hors ligne.
 
 ## Procédure (sur le PC, avec STM32CubeProgrammer installé)
 1. **Compiler** dans CubeIDE (Refresh puis Build) : on obtient `Debug/TP2_Capteurs_FSBL.bin`.
