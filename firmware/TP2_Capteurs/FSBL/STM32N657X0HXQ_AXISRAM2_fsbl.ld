@@ -56,15 +56,8 @@ MEMORY
 /* Sections */
 SECTIONS
 {
-  /* Code et constantes du runtime NPU de ST (ll_aton) + reseau genere : hors des 255 Ko du FSBL */
-  .npu_text :
-  {
-    . = ALIGN(32);
-    *ll_aton*.o(.text .text* .rodata .rodata*)
-    *meteo_npu*.o(.text .text* .rodata .rodata*)
-    *app_reseau.o(.rodata .rodata*) *meteo_prev3h.o(.text .text* .rodata .rodata*) *npu_sw_ops.o(.text .text* .rodata .rodata*)
-    . = ALIGN(32);
-  } >NPUCODE
+  /* Branche flash : tout le programme dans les 255 Ko du FSBL, en une seule image chargee par la
+     ROM de boot depuis la flash externe (compile en -Os : ~194 Ko). Le reseau NPU reste en 0x34100000. */
 
 
   /* The startup code into "ROM" Rom type memory */
