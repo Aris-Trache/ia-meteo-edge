@@ -156,7 +156,7 @@ La sortie est une **probabilité par classe** (softmax), par exemple `Dégagé 1
 - **F1 0,606** : on prédit une tendance, pas le bulletin de Météo-France.
 - Distinguer « dégagé » de « nuageux » sans **capteur de lumière** reste difficile. Ce serait l'ajout matériel le plus rentable.
 - La consommation est **estimée** à partir des datasheets, pas encore mesurée → protocole dans [docs/CONSOMMATION.md](docs/CONSOMMATION.md).
-- Programme en RAM (mode de démarrage de développement) : on relance la carte par Debug, pas par RESET.
+- Programme en RAM (mode de démarrage de développement) : on relance la carte par Debug, pas par RESET. La branche `flash` permet de démarrer seule depuis la flash externe → [procédure](docs/FLASH.md) (non testée sur carte à ce jour).
 
 ---
 
@@ -199,6 +199,7 @@ La sortie est une **probabilité par classe** (softmax), par exemple `Dégagé 1
 - [x] **Prévision à 3 h** : 2ᵉ IA embarquée, F1 0,585, 6 pluies sur 10 prévues → [détails](docs/PREVISION_3H.md)
 - [x] **Démo** : page web dans la carte, mode hors ligne, test du souffle → [détails](docs/DEMO_EDGE.md)
 - [x] **Heure et saison en entrée** (branche `saison`) : F1 0,604 → 0,626 → [étude](docs/SAISON.md)
+- [x] **Démarrage autonome** (branche `flash`) : image unique de 205 Ko signée, écrite en flash externe → [procédure](docs/FLASH.md)
 - [ ] **TP4** : pitch de 3 min
 
 ---
