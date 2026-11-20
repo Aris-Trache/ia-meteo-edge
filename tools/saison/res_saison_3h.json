@@ -1,0 +1,1 @@
+{"horizon_h": 3, "avec_saison": {"acc": 0.602, "bacc": 0.611, "f1": 0.584, "rappel_pluie": 0.653}, "sans_saison": {"acc": 0.607, "bacc": 0.605, "f1": 0.585, "rappel_pluie": 0.631}, "froid_avec": 0.551, "froid_sans": 0.535, "mu_saison": [-0.05630914121866226, 0.016550499945878983], "sd_saison": [0.7077592015266418, 0.7040149569511414]}
