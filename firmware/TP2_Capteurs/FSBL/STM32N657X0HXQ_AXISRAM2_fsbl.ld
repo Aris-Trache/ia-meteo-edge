@@ -62,7 +62,7 @@ SECTIONS
     . = ALIGN(32);
     *ll_aton*.o(.text .text* .rodata .rodata*)
     *meteo_npu*.o(.text .text* .rodata .rodata*)
-    *app_reseau.o(.rodata .rodata*) *meteo_prev3h.o(.text .text* .rodata .rodata*) *npu_sw_ops.o(.text .text* .rodata .rodata*)
+    *app_reseau.o(.rodata .rodata*) *meteo_prev3h.o(.text .text* .rodata .rodata*) *meteo_mlp_temps.o(.text .text* .rodata .rodata*) *meteo_prev3h_temps.o(.text .text* .rodata .rodata*) *meteo_temps.o(.text .text* .rodata .rodata*) *npu_sw_ops.o(.text .text* .rodata .rodata*)
     . = ALIGN(32);
   } >NPUCODE
 

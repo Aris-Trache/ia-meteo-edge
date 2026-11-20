@@ -1,22 +1,33 @@
-# Étude : ajouter la saison en entrée de l'IA
+# Branche `saison` : l'heure et la date en entrée de l'IA
 
-**Conclusion : la saison n'améliore pas le score global (F1 identique à ±0,001) ; elle gagne 2 à 3 points sur la détection
-de pluie et un peu au démarrage à froid. Modèle embarqué conservé sans saison.**
-
-## Méthode
-- Mêmes données Meteostat (6 stations), même découpage temporel (train 2017–2022, val 2023, **test 2024–2025**).
-- Même réseau 14 → 32 → 16 → 3, même entraînement (15 % d'exemples « démarrage à froid »).
-- 2 entrées ajoutées : jour de l'année codé en sinus / cosinus (`dsin`, `dcos`), soit 16 entrées.
-- Script : [`tools/saison/train_saison.py`](../tools/saison/train_saison.py) (`0` = maintenant, `3` = dans 3 h).
+**Conclusion : ajouter l'heure et le jour de l'année fait gagner +0,022 de F1 à l'IA « maintenant » (0,604 → 0,626)
+et +0,015 à l'IA « dans 3 h » (0,585 → 0,600). C'est surtout l'heure qui apporte ; la saison seule n'apporte rien.**
 
 ## Résultats (test 2024–2025, un essai par configuration)
-| IA | F1 sans saison | F1 avec saison | Rappel pluie sans → avec | F1 démarrage à froid sans → avec |
+| IA | Entrées | F1 | Rappel pluie | F1 démarrage à froid |
 |---|---|---|---|---|
-| Maintenant | 0,604 | 0,605 | 0,697 → 0,726 | 0,563 → 0,571 |
-| Dans 3 h | 0,585 | 0,584 | 0,631 → 0,653 | 0,535 → 0,551 |
+| Maintenant | 14 (version `npu`) | 0,604 | 0,697 | 0,563 |
+| Maintenant | 14 + saison | 0,605 | 0,726 | 0,571 |
+| **Maintenant** | **14 + heure + saison** | **0,626** | **0,728** | **0,592** |
+| Dans 3 h | 14 (version `npu`) | 0,585 | 0,631 | 0,535 |
+| Dans 3 h | 14 + saison | 0,584 | 0,653 | 0,551 |
+| **Dans 3 h** | **14 + heure + saison** | **0,600** | **0,650** | **0,570** |
 
-## Lecture
-- La **température capte déjà l'essentiel de la saison** : l'information ajoutée est presque redondante.
-- Les petits gains (pluie, démarrage à froid) sont à confirmer sur plusieurs graines avant toute décision.
-- Sur la carte, la date pourrait venir de la date de compilation (`__DATE__`), de l'horloge interne (RTC) ou des réponses
-  ThingSpeak ; l'intégrer imposerait de regénérer les versions int8, NPU et l'IA du Cloud pour un gain non significatif.
+Lecture : la température capte déjà la saison. L'heure apporte le cycle de la journée (rosée du matin, orages
+d'après-midi), que les capteurs seuls voient mal.
+
+## Ce qui change sur la carte (cette branche)
+- 4 entrées en plus : `hsin`, `hcos` (heure UTC), `dsin`, `dcos` (jour de l'année), mêmes formules que Python.
+- **D'où vient l'heure** (`meteo_temps.c`) : des réponses ThingSpeak dès qu'Internet a répondu ; sinon de la
+  **date de compilation** + le temps écoulé depuis le démarrage (la carte est relancée juste après la compilation).
+- Les 2 IA principales (maintenant, dans 3 h) utilisent les 18 entrées, en float32 (environ 15 µs).
+- L'IA 14 entrées reste calculée pour comparaison (float, int8 CMSIS-NN, NPU) et affichée dans la console :
+  `(heure 08:45 UTC, source Internet) | sans heure ni saison : …`.
+- Vérifications : C == Keras sur 8 vecteurs pour chaque IA (écart < 1,5·10⁻⁷) ; calcul de l'heure et du jour
+  de l'année identique à pandas.
+
+## Limites
+- Pas encore de versions int8 ni NPU des IA 18 entrées.
+- L'IA du Cloud (MATLAB) reste à 14 entrées : la comparaison Edge ↔ Cloud porte sur le modèle 14 entrées.
+- Hors Internet, l'heure vient de la compilation : juste si la carte est lancée juste après la compilation.
+- Scripts : `tools/saison/train_heure_saison.py` (`0` ou `3`) et `export_heure_saison.py`.

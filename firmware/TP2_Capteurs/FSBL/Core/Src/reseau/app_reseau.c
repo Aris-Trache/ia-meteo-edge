@@ -41,7 +41,8 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
-#include "page_web.h"                 /* tableau de bord servi par la carte */
+#include "page_web.h"
+#include "../meteo/meteo_temps.h"     /* reseau_heure_utc() */                 /* tableau de bord servi par la carte */
 
 /* Cles ThingSpeak : fichier local NON versionne (voir secrets_thingspeak_exemple.h) */
 #if __has_include("secrets_thingspeak.h")
@@ -198,6 +199,12 @@ static void date_iso(uint32_t epoch, char *b, size_t n)
   a += (m <= 2U);
   snprintf(b, n, "%04ld-%02lu-%02luT%02lu:%02lu:%02luZ", (long)a, (unsigned long)m, (unsigned long)j,
            (unsigned long)(sec / 3600U), (unsigned long)((sec / 60U) % 60U), (unsigned long)(sec % 60U));
+}
+
+/* Heure UTC courante (s depuis 1970), 0 tant qu'Internet n'a pas repondu (branche saison) */
+uint32_t reseau_heure_utc(void)
+{
+  return (epoch_ref != 0U) ? epoch_ref + (sys_now() - tick_ref) / 1000U : 0U;
 }
 
 /* "Date: Thu, 19 Nov 2026 16:52:44 GMT" -> heure de reference */

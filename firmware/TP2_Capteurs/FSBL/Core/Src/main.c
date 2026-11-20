@@ -27,7 +27,10 @@
 #include "meteo/meteo_features.h"
 #include "meteo/meteo_mlp_ref.h"
 #include "meteo/meteo_mlp_s8.h"
-#include "meteo/meteo_prev3h.h"   /* IA de prevision a 3 h */
+#include "meteo/meteo_prev3h.h"   /* IA de prevision a 3 h (14 entrees, gardee pour comparaison) */
+#include "meteo/meteo_temps.h"         /* branche saison : heure + jour de l'annee */
+#include "meteo/meteo_mlp_temps.h"     /* IA maintenant, 14 entrees + heure/saison */
+#include "meteo/meteo_prev3h_temps.h"  /* IA dans 3 h, 14 entrees + heure/saison */
 #include "reseau/app_reseau.h"
 #include "reseau/eth_carte.h"
 #include "npu/npu_meteo.h"
@@ -469,7 +472,15 @@ static void etape_ia_meteo(void)
   float proba_npu[METEO_NB_CLASSES];
   int classe_npu = npu_ok ? npu_meteo_predire(norm, proba_npu) : -1;   /* meme entree, NPU */
   float proba_3h[METEO_NB_CLASSES];
-  int classe_3h = meteo_prev3h_predire(norm, proba_3h);   /* meme entree, IA de prevision a 3 h */
+  /* Branche saison : les 2 IA principales recoivent aussi l'heure et le jour de l'annee */
+  float temps[4];
+  int h_utc = 0, mn = 0;
+  int src_temps = meteo_temps_calculer(temps, &h_utc, &mn);
+  float proba14[METEO_NB_CLASSES];
+  int classe14 = classe;                               /* IA 14 entrees (reference float, int8, NPU, Cloud) */
+  for (int i = 0; i < METEO_NB_CLASSES; i++) { proba14[i] = proba[i]; }
+  classe = meteo_temps_predire(norm, temps, proba);    /* IA retenue : 18 entrees */
+  int classe_3h = meteo_prev3h_temps_predire(norm, temps, proba_3h);
 #if TP2_PARTIE != 4
   BSP_LED_Off(LED_BLUE);
 #else
@@ -491,21 +502,24 @@ static void etape_ia_meteo(void)
     printf("%s %lu%%%s", METEO_CLASS_NAMES[i], (unsigned long)(proba[i] * 100.0f + 0.5f),
            (i < METEO_NB_CLASSES - 1) ? ", " : ")\r\n");
   }
+  printf("      (heure %02d:%02d UTC, source %s) | sans heure ni saison : %s (%lu%%)\r\n", h_utc, mn,
+         (src_temps == METEO_TEMPS_INTERNET) ? "Internet" : "compilation", METEO_CLASS_NAMES[classe14],
+         (unsigned long)(proba14[classe14] * 100.0f + 0.5f));
   printf("      Dans 3 h : %s (%lu%%, pluie %lu%%)\r\n", METEO_CLASS_NAMES[classe_3h],
          (unsigned long)(proba_3h[classe_3h] * 100.0f + 0.5f), (unsigned long)(proba_3h[2] * 100.0f + 0.5f));
   if (classe_s8 >= 0)
   {
     printf("      int8 : %s (%lu%%)%s\r\n", METEO_CLASS_NAMES[classe_s8],
            (unsigned long)(proba_s8[classe_s8] * 100.0f + 0.5f),
-           (classe_s8 == classe) ? "" : "  <- DIFFERENT du float");
-    nb_accord_s8 += (classe_s8 == classe) ? 1U : 0U;
+           (classe_s8 == classe14) ? "" : "  <- DIFFERENT du float");
+    nb_accord_s8 += (classe_s8 == classe14) ? 1U : 0U;
   }
   if (classe_npu >= 0)
   {
     printf("      NPU  : %s (%lu%%)%s\r\n", METEO_CLASS_NAMES[classe_npu],
            (unsigned long)(proba_npu[classe_npu] * 100.0f + 0.5f),
-           (classe_npu == classe) ? "" : "  <- DIFFERENT du float");
-    nb_accord_npu += (classe_npu == classe) ? 1U : 0U;
+           (classe_npu == classe14) ? "" : "  <- DIFFERENT du float");
+    nb_accord_npu += (classe_npu == classe14) ? 1U : 0U;
   }
   if ((++nb_predictions % 15U) == 0U)          /* toutes les 30 s */
   {
